@@ -38,7 +38,7 @@ export const AuthService = {
     try {
       const isAuth = await client.isAuthenticated();
       if (!isAuth) return null;
-      return await client.getUserInfo();
+      return await client.fetchUserInfo();
     } catch {
       return null;
     }

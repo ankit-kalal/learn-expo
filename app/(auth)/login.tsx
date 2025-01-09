@@ -1,90 +1,95 @@
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/auth';
+import { AuthService } from '../../services/auth';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const { signIn, signOut, user, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const addLog = (message: string) => {
+    console.log(message); // Terminal log
+    setLogs(prev => [`${new Date().toISOString()}: ${message}`, ...prev]);
+  };
+
+  useEffect(() => {
+    addLog(`Initial auth state - User: ${user ? 'Logged in' : 'Not logged in'}`);
+  }, []);
 
   const handleSignIn = async () => {
     try {
       setError(null);
+      addLog('Starting sign in process...');
       await signIn();
+      addLog('Sign in completed successfully');
+      
+      // Check authentication status after sign in
+      const authState = await AuthService.isAuthenticated();
+      addLog(`Authentication status after sign in: ${authState ? 'Authenticated' : 'Not authenticated'}`);
+      
+      if (authState) {
+        const userData = await AuthService.getUser();
+        addLog(`User data received: ${JSON.stringify(userData, null, 2)}`);
+      }
     } catch (err) {
-      setError('Authentication failed. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Authentication failed: ${errorMessage}`);
+      addLog(`Sign in error: ${errorMessage}`);
       console.error('Sign in error:', err);
     }
   };
 
   const handleSignOut = async () => {
     try {
+      addLog('Starting sign out process...');
       await signOut();
+      addLog('Sign out completed successfully');
     } catch (err) {
-      setError('Sign out failed. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Sign out failed: ${errorMessage}`);
+      addLog(`Sign out error: ${errorMessage}`);
       console.error('Sign out error:', err);
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#ffd33d" />
-        <Text style={styles.hint}>Checking authentication status...</Text>
-      </View>
-    );
-  }
-
-  if (user) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.userInfo}>
-          <Text style={styles.title}>Welcome!</Text>
-          <Text style={styles.userText}>
-            {user.name || user.username || 'User'}
-          </Text>
-          {user.email && (
-            <Text style={styles.emailText}>{user.email}</Text>
-          )}
-        </View>
-        
-        <View style={styles.buttonGroup}>
-          <Pressable
-            style={styles.button}
-            onPress={() => router.push('/')}
-          >
-            <Text style={styles.buttonText}>Go to Posts</Text>
-          </Pressable>
-          
-          <Pressable
-            style={[styles.button, styles.signOutButton]}
-            onPress={handleSignOut}
-          >
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      {error && <Text style={styles.errorText}>{error}</Text>}
-      <Pressable
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleSignIn}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#25292e" />
-        ) : (
-          <Text style={styles.buttonText}>Sign In with Logto</Text>
-        )}
-      </Pressable>
-      <Text style={styles.hint}>
-        {isLoading ? 'Authenticating...' : 'Not signed in. Tap to sign in.'}
-      </Text>
+      <ScrollView style={styles.scrollView}>
+        <Text style={styles.title}>Welcome Back</Text>
+        
+        {/* Auth Status */}
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>
+            Status: {isLoading ? 'Loading...' : user ? 'Authenticated' : 'Not Authenticated'}
+          </Text>
+        </View>
+
+        {/* Error Display */}
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
+        {/* Auth Button */}
+        <Pressable
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#25292e" />
+          ) : (
+            <Text style={styles.buttonText}>Sign In with Logto</Text>
+          )}
+        </Pressable>
+
+        {/* Debug Logs */}
+        <View style={styles.logsContainer}>
+          <Text style={styles.logsTitle}>Debug Logs:</Text>
+          {logs.map((log, index) => (
+            <Text key={index} style={styles.logText}>{log}</Text>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -93,8 +98,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#25292e',
+  },
+  scrollView: {
     padding: 16,
-    justifyContent: 'center',
   },
   title: {
     fontSize: 24,
@@ -102,34 +108,23 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  userInfo: {
+  statusContainer: {
     backgroundColor: '#2f3542',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 24,
-    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
   },
-  userText: {
-    fontSize: 18,
+  statusText: {
     color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  emailText: {
     fontSize: 16,
-    color: '#ccc',
-  },
-  buttonGroup: {
-    gap: 12,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#ffd33d',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-  },
-  signOutButton: {
-    backgroundColor: '#ff4757',
+    marginBottom: 24,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -144,11 +139,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     marginBottom: 16,
+    padding: 8,
+    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+    borderRadius: 8,
   },
-  hint: {
+  logsContainer: {
+    backgroundColor: '#2f3542',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  logsTitle: {
+    color: '#ffd33d',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  logText: {
     color: '#ccc',
-    textAlign: 'center',
-    marginTop: 16,
-    fontSize: 14,
+    fontSize: 12,
+    fontFamily: 'monospace',
+    marginBottom: 4,
   },
 }); 
