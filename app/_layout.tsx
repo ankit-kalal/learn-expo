@@ -4,6 +4,8 @@ import { AuthProvider } from '../contexts/auth';
 import { logtoConfig } from '../config/logto';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuth } from '../contexts/auth';
+import { Platform } from 'react-native';
+import { useEffect, useState } from 'react';
 
 function RootLayoutNav() {
   const { isLoading } = useAuth();
@@ -53,6 +55,16 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null; // or a loading state
+  }
+
   return (
     <LogtoProvider config={logtoConfig}>
       <AuthProvider>
