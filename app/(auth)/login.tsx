@@ -1,58 +1,89 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../contexts/auth';
+import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { signIn, signOut, user, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const { signIn, isLoading } = useAuth();
 
-  const handleLogin = async () => {
+  const handleSignIn = async () => {
     try {
       setError(null);
-      await signIn(email, password);
+      await signIn();
     } catch (err) {
-      setError('Invalid credentials');
+      setError('Authentication failed. Please try again.');
+      console.error('Sign in error:', err);
     }
   };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      setError('Sign out failed. Please try again.');
+      console.error('Sign out error:', err);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#ffd33d" />
+        <Text style={styles.hint}>Checking authentication status...</Text>
+      </View>
+    );
+  }
+
+  if (user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.userInfo}>
+          <Text style={styles.title}>Welcome!</Text>
+          <Text style={styles.userText}>
+            {user.name || user.username || 'User'}
+          </Text>
+          {user.email && (
+            <Text style={styles.emailText}>{user.email}</Text>
+          )}
+        </View>
+        
+        <View style={styles.buttonGroup}>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.push('/')}
+          >
+            <Text style={styles.buttonText}>Go to Posts</Text>
+          </Pressable>
+          
+          <Pressable
+            style={[styles.button, styles.signOutButton]}
+            onPress={handleSignOut}
+          >
+            <Text style={styles.buttonText}>Sign Out</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome Back</Text>
-      {error && <Text style={styles.error}>{error}</Text>}
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#666"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#666"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      {error && <Text style={styles.errorText}>{error}</Text>}
       <Pressable
         style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleLogin}
+        onPress={handleSignIn}
         disabled={isLoading}
       >
         {isLoading ? (
           <ActivityIndicator color="#25292e" />
         ) : (
-          <Text style={styles.buttonText}>Sign In</Text>
+          <Text style={styles.buttonText}>Sign In with Logto</Text>
         )}
       </Pressable>
       <Text style={styles.hint}>
-        Use these credentials:{'\n'}
-        Email: test@example.com{'\n'}
-        Password: password
+        {isLoading ? 'Authenticating...' : 'Not signed in. Tap to sign in.'}
       </Text>
     </View>
   );
@@ -71,19 +102,34 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  input: {
+  userInfo: {
     backgroundColor: '#2f3542',
-    borderRadius: 8,
-    padding: 12,
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  userText: {
+    fontSize: 18,
     color: '#fff',
-    marginBottom: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  emailText: {
     fontSize: 16,
+    color: '#ccc',
+  },
+  buttonGroup: {
+    gap: 12,
   },
   button: {
     backgroundColor: '#ffd33d',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  signOutButton: {
+    backgroundColor: '#ff4757',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -93,14 +139,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  error: {
+  errorText: {
     color: '#ff4757',
-    marginBottom: 16,
     textAlign: 'center',
+    fontSize: 16,
+    marginBottom: 16,
   },
   hint: {
-    color: '#666',
-    marginTop: 32,
+    color: '#ccc',
     textAlign: 'center',
+    marginTop: 16,
+    fontSize: 14,
   },
 }); 

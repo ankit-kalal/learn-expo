@@ -1,17 +1,17 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AuthApi } from '../api/auth';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { router, useSegments, useRootNavigationState } from 'expo-router';
+import { AuthService } from '../services/auth';
+import type { UserInfoResponse } from '@logto/rn';
 
 interface AuthContextType {
-  user: User | null;
+  user: UserInfoResponse | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// This hook can be used to access the user info.
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -20,8 +20,7 @@ export function useAuth() {
   return context;
 }
 
-// This hook will protect the route access based on user authentication.
-function useProtectedRoute(user: User | null) {
+function useProtectedRoute(user: UserInfoResponse | null) {
   const segments = useSegments();
   const navigationState = useRootNavigationState();
 
@@ -31,26 +30,44 @@ function useProtectedRoute(user: User | null) {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Redirect to the sign-in page.
       router.replace('/login');
     } else if (user && inAuthGroup) {
-      // Redirect away from the sign-in page.
       router.replace('/');
     }
   }, [user, segments, navigationState?.key]);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<UserInfoResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useProtectedRoute(user);
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const checkAuth = async () => {
+    try {
+      const isAuth = await AuthService.isAuthenticated();
+      if (isAuth) {
+        const userData = await AuthService.getUser();
+        setUser(userData);
+      }
+    } catch (err) {
+      console.error('Auth check failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signIn = async () => {
     try {
       setIsLoading(true);
-      const user = await AuthApi.login({ email, password });
-      setUser(user);
+      await AuthService.signIn();
+      const userData = await AuthService.getUser();
+      setUser(userData);
+    } catch (err) {
+      console.error('Sign in failed:', err);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -59,12 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       setIsLoading(true);
-      await AuthApi.logout();
+      await AuthService.signOut();
       setUser(null);
+    } catch (err) {
+      console.error('Sign out failed:', err);
     } finally {
       setIsLoading(false);
     }
   };
+
+  useProtectedRoute(user);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>

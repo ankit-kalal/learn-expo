@@ -1,32 +1,44 @@
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
+import { LogtoClient } from '@logto/rn';
 
-interface User {
-  id: number;
-  email: string;
-  name: string;
-}
+export const logtoConfig = {
+  endpoint: 'https://mgdwia.logto.app/',  // Your Logto endpoint
+  appId: '8sr3y8o0ex1ddbn5tfikf',        // Your Logto app ID
+  resources: [],
+  scopes: ['email', 'profile', 'openid'],
+};
+
+let logtoClient: LogtoClient | null = null;
 
 export const AuthApi = {
-  login: async (credentials: LoginCredentials): Promise<User> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Dummy validation
-    if (credentials.email === 'test@example.com' && credentials.password === 'password') {
-      return {
-        id: 1,
-        email: 'test@example.com',
-        name: 'Test User',
-      };
+  getClient: () => {
+    if (!logtoClient) {
+      logtoClient = new LogtoClient(logtoConfig);
     }
-    throw new Error('Invalid credentials');
+    return logtoClient;
+  },
+
+  isAuthenticated: async (): Promise<boolean> => {
+    const client = AuthApi.getClient();
+    return client.isAuthenticated();
+  },
+
+  login: async (): Promise<void> => {
+    const client = AuthApi.getClient();
+    await client.signIn('com.nilesh03.tor://callback');
   },
 
   logout: async (): Promise<void> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const client = AuthApi.getClient();
+    await client.signOut();
+  },
+
+  getUser: async () => {
+    const client = AuthApi.getClient();
+    const userInfo = await client.getUserInfo();
+    return {
+      id: userInfo.sub,
+      email: userInfo.email,
+      name: userInfo.name || userInfo.username || 'User',
+    };
   },
 }; 
