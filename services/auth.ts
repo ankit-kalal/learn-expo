@@ -18,7 +18,10 @@ export const AuthService = {
     const config = getLogtoConfig();
     
     if (Platform.OS === 'web') {
-      await client.signIn(config.redirectUri);
+      window.location.href = await client.signIn(config.redirectUri, {
+        redirectUri: config.redirectUri,
+        prompt: 'consent',
+      });
     } else {
       try {
         await WebBrowser.warmUpAsync();
@@ -31,7 +34,13 @@ export const AuthService = {
 
   handleSignInCallback: async (callbackUrl: string) => {
     const client = getLogtoClient();
-    await client.handleSignInCallback(callbackUrl);
+    try {
+      await client.handleSignInCallback(callbackUrl);
+      return true;
+    } catch (error) {
+      console.error('Handle sign-in callback error:', error);
+      return false;
+    }
   },
 
   signOut: async () => {
@@ -39,7 +48,7 @@ export const AuthService = {
     const config = getLogtoConfig();
     
     if (Platform.OS === 'web') {
-      await client.signOut(config.redirectUri);
+      window.location.href = await client.signOut(config.redirectUri);
     } else {
       try {
         await WebBrowser.warmUpAsync();

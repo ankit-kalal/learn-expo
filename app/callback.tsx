@@ -11,14 +11,10 @@ export default function CallbackPage() {
     const handleCallback = async () => {
       try {
         if (Platform.OS === 'web') {
-          // Handle the callback URL
-          await AuthService.handleSignInCallback(window.location.href);
-          
-          // Verify authentication
-          const isAuthenticated = await AuthService.isAuthenticated();
-          if (isAuthenticated && isMounted) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            router.replace('/');
+          const success = await AuthService.handleSignInCallback(window.location.href);
+          if (success && isMounted) {
+            // Redirect back to the main page
+            window.location.href = window.location.origin;
             return;
           }
         }
