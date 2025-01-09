@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.ankitkalal1502.StickerSmash"
     },
     "web": {
       "bundler": "metro",
@@ -32,10 +33,19 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+       "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "6e9dc1f8-ad15-4663-a995-9f1960d2467e"
+      }
     }
   }
 }
