@@ -24,7 +24,7 @@ export const AuthApi = {
 
   login: async (): Promise<void> => {
     const client = AuthApi.getClient();
-    await client.signIn('com.nilesh03.tor://callback');
+    await client.signIn('io.logto://callback');
   },
 
   logout: async (): Promise<void> => {
@@ -34,7 +34,7 @@ export const AuthApi = {
 
   getUser: async () => {
     const client = AuthApi.getClient();
-    const userInfo = await client.getUserInfo();
+    const userInfo = await client.fetchUserInfo();
     return {
       id: userInfo.sub,
       email: userInfo.email,

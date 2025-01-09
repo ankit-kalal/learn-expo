@@ -1,24 +1,44 @@
 import { useEffect } from 'react';
-import { View, Text } from 'react-native';
 import { router } from 'expo-router';
-import { useAuth } from '../contexts/auth';
+import { AuthService } from '../services/auth';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Platform } from 'react-native';
 
 export default function CallbackPage() {
-  const { signIn } = useAuth();
-
   useEffect(() => {
+    let isMounted = true;
+
     const handleCallback = async () => {
       try {
-        await signIn();
-        router.replace('/');
+        if (Platform.OS === 'web') {
+          // Handle the callback URL
+          await AuthService.handleSignInCallback(window.location.href);
+          
+          // Verify authentication
+          const isAuthenticated = await AuthService.isAuthenticated();
+          if (isAuthenticated && isMounted) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            router.replace('/');
+            return;
+          }
+        }
+        
+        if (isMounted) {
+          router.replace('/login');
+        }
       } catch (error) {
         console.error('Callback error:', error);
-        router.replace('/login');
+        if (isMounted) {
+          router.replace('/login');
+        }
       }
     };
 
     handleCallback();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return <LoadingScreen message="Completing sign in..." />;
